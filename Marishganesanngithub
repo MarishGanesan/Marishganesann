@@ -1,0 +1,147 @@
+from scapy.all import sniff
+
+def packet_callback(packet):
+    print(packet.summary())
+
+# Capture packets on interface 'eth0'
+sniff(iface='eth0', prn=packet_callback, store=False)
+from scapy.all import IP, TCP, DNS, UDP
+
+def packet_callback(packet):
+    if IP in packet:
+        ip_src = packet[IP].src
+        ip_dst = packet[IP].dst
+        print(f"IP Packet: {ip_src} -> {ip_dst}")
+    if TCP in packet:
+        tcp_sport = packet[TCP].sport
+        tcp_dport = packet[TCP].dport
+        print(f"TCP Segment: {tcp_sport} -> {tcp_dport}")
+    if DNS in packet and packet[DNS].qr == 0:
+        print(f"DNS Query: {packet[DNSQR].qname}")
+
+sniff(iface='eth0', prn=packet_callback, store=False)
+# Using PySnort to integrate Snort rules
+from pysnort import SnortRule, SnortDetector
+
+# Example Snort rule to detect HTTP traffic
+http_rule = SnortRule("alert tcp any any -> any 80 (msg:\"HTTP Traffic\"; sid:1000001;)")
+
+detector = SnortDetector([http_rule])
+
+def packet_callback(packet):
+    alerts = detector.detect(packet)
+    for alert in alerts:
+        print(f"ALERT: {alert.msg} (sid: {alert.sid})")
+
+sniff(iface='eth0', prn=packet_callback, store=False)
+# Using PySnort to integrate Snort rules
+from pysnort import SnortRule, SnortDetector
+
+# Example Snort rule to detect HTTP traffic
+http_rule = SnortRule("alert tcp any any -> any 80 (msg:\"HTTP Traffic\"; sid:1000001;)")
+
+detector = SnortDetector([http_rule])
+
+def packet_callback(packet):
+    alerts = detector.detect(packet)
+    for alert in alerts:
+        print(f"ALERT: {alert.msg} (sid: {alert.sid})")
+
+sniff(iface='eth0', prn=packet_callback, store=False)
+import smtplib
+from email.mime.text import MIMEText
+
+def send_email_alert(subject, body):
+    msg = MIMEText(body)
+    msg['Subject'] = subject
+    msg['From'] = 'alert@example.com'
+    msg['To'] = 'admin@example.com'
+    
+    with smtplib.SMTP('smtp.example.com') as server:
+        server.login('user', 'password')
+        server.sendmail(msg['From'], [msg['To']], msg.as_string())
+
+def packet_callback(packet):
+    # Example threat detection logic
+    if packet.haslayer(TCP) and packet[TCP].dport == 80:
+        send_email_alert("Suspicious Activity Detected", f"Packet: {packet.summary()}")
+
+sniff(iface='eth0', prn=packet_callback, store=False)
+from flask import Flask, render_template
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/alerts')
+def alerts():
+    # Fetch alerts from the database/log file
+    return render_template('alerts.html', alerts=get_alerts())
+
+def get_alerts():
+    # Dummy data; replace with actual database queries
+    return [
+        {'timestamp': '2024-06-07 12:00', 'message': 'HTTP Traffic Detected'},
+        {'timestamp': '2024-06-07 12:05', 'message': 'Suspicious Activity Detected'},
+    ]
+
+if __name__ == '__main__':
+    app.run(debug=True)
+import logging
+from scapy.all import sniff, IP, TCP
+import pandas as pd
+from datetime import datetime
+
+# Set up logging
+logging.basicConfig(filename='network_traffic.log', level=logging.INFO, format='%(asctime)s - %(message)s')
+
+# Threat signatures (simple example)
+THREAT_SIGNATURES = {
+    'SYN_FLOOD': {'dport': 80, 'flags': 'S'},
+    # Add more signatures here
+}
+
+# DataFrame to store captured packets
+columns = ['timestamp', 'src', 'dst', 'sport', 'dport', 'protocol', 'flags']
+packet_log = pd.DataFrame(columns=columns)
+
+def packet_callback(packet):
+    global packet_log
+    
+    # Filter IP and TCP packets
+    if IP in packet and TCP in packet:
+        ip_layer = packet[IP]
+        tcp_layer = packet[TCP]
+        
+        # Log packet details
+        packet_details = {
+            'timestamp': datetime.now(),
+            'src': ip_layer.src,
+            'dst': ip_layer.dst,
+            'sport': tcp_layer.sport,
+            'dport': tcp_layer.dport,
+            'protocol': 'TCP',
+            'flags': tcp_layer.flags
+        }
+        packet_log = packet_log.append(packet_details, ignore_index=True)
+        
+        # Simple threat detection
+        for threat, signature in THREAT_SIGNATURES.items():
+            if all(packet_details.get(k) == v for k, v in signature.items()):
+                alert_message = f"Potential {threat} detected: {packet_details}"
+                logging.warning(alert_message)
+                print(alert_message)
+
+def start_sniffing(interface="eth0"):
+    print(f"Starting packet sniffing on {interface}...")
+    sniff(iface=interface, prn=packet_callback, store=0)
+
+if __name__ == "__main__":
+    try:
+        start_sniffing()
+    except KeyboardInterrupt:
+        print("Stopping packet sniffing...")
+        # Save the packet log to a CSV file
+        packet_log.to_csv('captured_packets.csv', index=False)
+        print("Packet log saved to 'captured_packets.csv'.")
